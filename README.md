@@ -7,7 +7,7 @@ Anything in CS.
 
 - [x] ArrayList
 
-- [ ] LinkedList
+- [x] LinkedList
 
 - [ ] Queue
 
