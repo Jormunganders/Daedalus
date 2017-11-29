@@ -10,16 +10,20 @@ class ArrayList(object):
         if initial_capacity < 0:
             raise Exception("Illegal capacity")  # 抛出异常
 
-        self.__max_size = initial_capacity  # 数据个数
+        self.__max_size = initial_capacity  # 最大数据容量
         self.__element_data = [None] * self.__max_size  # 内部数组，用于存放数据
 
-    def put(self, index, element):
+    def add(self, element):
+        if self.__size >= self.__max_size:
+            raise Exception("ArrayList is full!")
+        self.__element_data[self.__size] = element
+        self.__size += 1
+
+    def update(self, index, new_element):
         self.__check_index(index)
-        self.__element_data[index] = element
-        pass
+        self.__element_data[index] = new_element
 
     def get(self, index):
-        """支持反向查找"""
         self.__check_index(index)
         return self.__element_data[index]
 
@@ -29,14 +33,14 @@ class ArrayList(object):
     def remove(self, index):
         self.__check_index(index)
         self.__element_data.pop(index)
-        pass
+        self.__size -= 1
 
     def clear(self):
         self.__element_data.clear()
-        self.__max_size = 0
+        self.__size = 0
         pass
 
     def __check_index(self, index):
-        """检查索引范围"""
-        if index < -self.__max_size or index >= self.__max_size:
+        """检查索引范围，不支持反向"""
+        if index < 0 or index >= self.__size:
             raise Exception("Illegal index")  # 抛出异常
