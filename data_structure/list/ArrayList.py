@@ -14,9 +14,21 @@ class ArrayList(object):
         self.__element_data = [None] * self.__max_size  # 内部数组，用于存放数据
 
     def add(self, element):
+        """尾部添加"""
         if self.__size >= self.__max_size:
             raise Exception("ArrayList is full!")
         self.__element_data[self.__size] = element
+        self.__size += 1
+
+    def insert(self, index, element):
+        """任意部分插入数据"""
+        if index < 0 or index > self.__size:
+            raise Exception("Illegal index")  # 抛出异常
+        if self.__size >= self.__max_size:
+            raise Exception("ArrayList is full!")
+        for temp_index in range(index, self.__size):  # 不包含尾部
+            self.__element_data[index + 1] = self.__element_data[index]
+        self.__element_data[index] = element
         self.__size += 1
 
     def update(self, index, new_element):
@@ -44,3 +56,6 @@ class ArrayList(object):
         """检查索引范围，不支持反向"""
         if index < 0 or index >= self.__size:
             raise Exception("Illegal index")  # 抛出异常
+
+    def __str__(self):
+        return "size is " + str(self.__size) + ", data is " + str(self.__element_data)
