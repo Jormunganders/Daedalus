@@ -11,4 +11,4 @@ Anything in CS.
 
 - [ ] Queue
 
-- [ ] Stack
+- [X] Stack
