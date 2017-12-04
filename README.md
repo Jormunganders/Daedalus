@@ -9,6 +9,6 @@ Anything in CS.
 
 - [x] LinkedList
 
-- [ ] Queue
+- [x] Queue
 
-- [X] Stack
+- [x] Stack

@@ -44,7 +44,7 @@ class Stack:
 
         old_tail_node = self.__tail
         self.__tail = temp_node
-        self.__size -= 0
+        self.__size -= 1
         return old_tail_node
 
     def size(self):
