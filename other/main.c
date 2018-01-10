@@ -14,6 +14,7 @@ typedef struct _Vertex { //顶点的数据结构，用 Vertex 代替 struct _ver
     int x;
     int y;
     int id; //从 0 开始
+    int available; //是否可用，1 - 可用，0 - 不可用
 } Vertex;
 
 typedef struct _Edge {
@@ -32,7 +33,7 @@ typedef struct _Graph {
 //执行 prime 算法的结果
 typedef struct _Result {
     int length;
-    Edge *edges[INFINITY];
+    Edge *edges[INFINITY * (INFINITY - 1) / 2];
 } Result;
 
 const char PATH[] = "data.txt";     //文件的路径
@@ -61,7 +62,7 @@ double getDistance(int x1, int y1, int x2, int y2) {
  * 从文件中读取数据
  * @return Graph*
  */
-void readData(Graph* graph) {
+void readData(Graph *graph) {
     FILE *fp = NULL;
     fp = fopen(PATH, "r");
     int vertexNum;
@@ -77,6 +78,7 @@ void readData(Graph* graph) {
         tempVertex->id = id;
         tempVertex->x = x;
         tempVertex->y = y;
+        tempVertex->available = 1; //初始化为可用
         graph->vertexs[tempVertex->id] = tempVertex;
     }
     int edgeNum;
@@ -93,6 +95,8 @@ void readData(Graph* graph) {
                              graph->vertexs[end]->y);   //计算边的权值
         graph->matrix[start][end] = length;
         graph->matrix[end][start] = length;
+        graph->vertexs[start]->available = 0;  //设置为不可用
+        graph->vertexs[end]->available = 0;    //设置为不可用
     }
     fclose(fp);
     fp = NULL;
@@ -112,14 +116,12 @@ void writeData(Graph graph) {
     }
     fprintf(fp, "%d\n", graph.vertexNum);  //把点的个数写入文件中
     for (int i = 0; i < graph.vertexNum; i++) {  //把点的信息依次写入文件中
-        /*printf("id:%d x:%d y:%d\n", graph.vertexs[i]->id, graph.vertexs[i]->x,
-               graph.vertexs[i]->y);*/
         fprintf(fp, "%d %d %d\n", graph.vertexs[i]->id, graph.vertexs[i]->x,
                 graph.vertexs[i]->y);
     }
     fprintf(fp, "%d\n", graph.edgeNum); //向文件中写入边的个数
-    for (int i = 0; i < graph.vertexNum; i++) {  //向文件中写入各条边的信息
-        for (int j = i; j < graph.vertexNum; j++) {
+    for (int i = 0; i < graph.vertexNum - 1; i++) {  //向文件中写入各条边的信息
+        for (int j = i + 1; j < graph.vertexNum; j++) {
             if (graph.matrix[i][j] != 0) { //i 与 j 连通
                 fprintf(fp, "%d %d\n", i, j);     //将边的两个顶点写入文件中
             }
@@ -150,9 +152,8 @@ void readFromConsole(Graph *graph) {
         tempVertex->id = i;     //id 递增
         tempVertex->x = x;
         tempVertex->y = y;
-//        printf("从控制台读取点的信息：%d %d %d\n", tempVertex->id, tempVertex->x, tempVertex->y);
+        tempVertex->available = 1; //初始化为可用
         graph->vertexs[tempVertex->id] = tempVertex;
-//        printf("Hello World\n");
     }
     printf("输入边的个数：\n");
     int edgeNum;
@@ -164,24 +165,91 @@ void readFromConsole(Graph *graph) {
     for (int i = 0; i < graph->edgeNum; i++) {
         scanf("%d %d", &start, &end);
         length = getDistance(graph->vertexs[start]->x,
-                                       graph->vertexs[start]->y,
-                                       graph->vertexs[end]->x,
-                                       graph->vertexs[end]->y);   //计算边的权值
+                             graph->vertexs[start]->y,
+                             graph->vertexs[end]->x,
+                             graph->vertexs[end]->y);   //计算边的权值
         graph->matrix[start][end] = length;
         graph->matrix[end][start] = length;
+        graph->vertexs[start]->available = 0;  //设置为不可用
+        graph->vertexs[end]->available = 0;    //设置为不可用
     }
 }
 
-Result *prim(Graph graph) {
-    return NULL;
+/**
+ * 当边的两个点都不可用的时候，就代表该边无法使用
+ * 获取所有可用的边
+ * 进行排序
+ * @return 数组
+ */
+void getAvailableEdges(Graph graph, Result *result) {
+    for (int i = 0; i < graph.vertexNum - 1; i++) {  //向文件中写入各条边的信息
+        for (int j = i + 1; j < graph.vertexNum; j++) {
+            if (graph.vertexs[i]->available != 0 ||
+                graph.vertexs[j]->available != 0) {     //这条边可用
+                Edge *tempEdge = (Edge *) malloc(sizeof(Edge *));
+                tempEdge->start = i;
+                tempEdge->end = j;
+                tempEdge->length = getDistance(graph.vertexs[i]->x,
+                                               graph.vertexs[i]->y,
+                                               graph.vertexs[j]->x,
+                                               graph.vertexs[j]->y);   //计算边的权值
+                if (result->length == 0) {  //没有边的时候
+                    result->edges[0] = tempEdge;
+                    result->length = 1;
+                } else {
+                    //向数组里插入该边
+                    int m;
+                    for (m = 0; m < result->length; m++) {
+                        if (tempEdge->length < result->edges[m]->length) {  //新边的权值小于当前边的权值
+                            for (int n = result->length; n > m; n--) {    //后面的元素向后移
+                                result->edges[n] = result->edges[n - 1];
+                            }
+                            result->edges[m] = tempEdge;
+                            result->length++;
+                            break;
+                        }
+                    }
+                    if (m == result->length) {
+                        result->edges[result->length] = tempEdge;    //放在最后一位
+                        result->length++;
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * @param graph
+ * @param result
+ */
+void kruskal(Graph graph, Result *result) {
+    /*
+    for (int i = 0; i < availableEdges.length; ++i) {
+        printf("start: %d end: %d length: %f\n",
+               availableEdges.edges[i]->start,
+               availableEdges.edges[i]->end,
+               availableEdges.edges[i]->length);
+    }*/
+    //点的数目 - 1 - 边的数目
+    for (int i = 0;i < graph.vertexNum - 1 - graph.edgeNum;i++) {
+        Result availableEdges;
+        availableEdges.length = 0;
+        getAvailableEdges(graph, &availableEdges);  //获取可用的边，选取最小的一个
+        result->length = i + 1;
+        Edge* tempEdge = availableEdges.edges[0];
+        result->edges[i] = tempEdge;
+        graph.vertexs[tempEdge->start]->available = 0; //设置该节点为不可用
+        graph.vertexs[tempEdge->end]->available = 0; //设置该节点为不可用=
+    }
 }
 
 Graph createGraph() {
     Graph graph;
     graph.vertexNum = 0;
     graph.edgeNum = 0;
-    for (int i = 0;i < INFINITY;i++) {
-        for (int j = 0;j < INFINITY;j++) {
+    for (int i = 0; i < INFINITY; i++) {
+        for (int j = 0; j < INFINITY; j++) {
             graph.matrix[i][j] = 0;
         }
     }
@@ -224,16 +292,21 @@ int main() {
     printf("-------\n");
     printf("点的个数：%d\n", graph.vertexNum);
     printf("边的个数：%d\n", graph.edgeNum);
-    Result *result = prim(graph);
-    if (result == NULL || result->length == 0) {
+    Result result;
+    result.length = 0;
+    kruskal(graph, &result);
+    if (result.length == 0) {
         printf("没有可用的边\n");
     } else {
-        printf("选择的边共： %d 条：\n", result->length);
-        for (int i = 0; i < result->length; i++) {
-            printf("%d ---- %d, 长度为：%f \n", result->edges[i]->start,
-                   result->edges[i]->end,
-                   result->edges[i]->length);
+        printf("选择的边共： %d 条：\n", result.length);
+        double total = 0;
+        for (int i = 0; i < result.length; i++) {
+            total += result.edges[i]->length;
+            printf("%d -- %d, 长度为：%f \n", result.edges[i]->start,
+                   result.edges[i]->end,
+                   result.edges[i]->length);
         }
+        printf("总长度为：%.3f\n",total);
     }
     freeGraph(&graph);
     printf("-------\n");
