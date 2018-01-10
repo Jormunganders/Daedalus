@@ -154,6 +154,7 @@ void readFromConsole(Graph *graph) {
         tempVertex->y = y;
         tempVertex->available = 1; //初始化为可用
         graph->vertexs[tempVertex->id] = tempVertex;
+        printf("该点的id：%d\n",tempVertex->id);
     }
     printf("输入边的个数：\n");
     int edgeNum;
@@ -220,19 +221,32 @@ void getAvailableEdges(Graph graph, Result *result) {
 }
 
 /**
+ * 获取可用的点
+ * @param graph
+ * @return
+ */
+int getAvalibleVertex(Graph graph) {
+    int num = 0;
+    for (int i = 0; i < graph.vertexNum; ++i) {
+        if (graph.vertexs[i]->available == 1) {
+            num++;
+        }
+    }
+    printf("可用点的数目有：%d\n",num);
+    return num;
+}
+
+/**
  * @param graph
  * @param result
  */
 void kruskal(Graph graph, Result *result) {
-    /*
-    for (int i = 0; i < availableEdges.length; ++i) {
-        printf("start: %d end: %d length: %f\n",
-               availableEdges.edges[i]->start,
-               availableEdges.edges[i]->end,
-               availableEdges.edges[i]->length);
-    }*/
-    //点的数目 - 1 - 边的数目
-    for (int i = 0;i < graph.vertexNum - 1 - graph.edgeNum;i++) {
+
+    int avalibleVertexNum = getAvalibleVertex(graph);
+
+    printf("孤立的点有：%d\n",avalibleVertexNum);
+
+    for (int i = 0;i < avalibleVertexNum;i++) {
         Result availableEdges;
         availableEdges.length = 0;
         getAvailableEdges(graph, &availableEdges);  //获取可用的边，选取最小的一个
@@ -240,7 +254,7 @@ void kruskal(Graph graph, Result *result) {
         Edge* tempEdge = availableEdges.edges[0];
         result->edges[i] = tempEdge;
         graph.vertexs[tempEdge->start]->available = 0; //设置该节点为不可用
-        graph.vertexs[tempEdge->end]->available = 0; //设置该节点为不可用=
+        graph.vertexs[tempEdge->end]->available = 0; //设置该节点为不可用
     }
 }
 
@@ -302,7 +316,7 @@ int main() {
         double total = 0;
         for (int i = 0; i < result.length; i++) {
             total += result.edges[i]->length;
-            printf("%d -- %d, 长度为：%f \n", result.edges[i]->start,
+            printf("%d -- %d, 长度为：%.3f \n", result.edges[i]->start,
                    result.edges[i]->end,
                    result.edges[i]->length);
         }
@@ -313,3 +327,4 @@ int main() {
     printf("结束\n");
     return 0;
 }
+
