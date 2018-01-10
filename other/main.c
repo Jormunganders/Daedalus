@@ -1,8 +1,8 @@
-#include<stdio.h>
-#include<stdlib.h>
-#include<math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
 
-#define INFINITY 1000
+#define INFINITY 20
 
 //typedef 别名
 //会用到哪些结构体，
@@ -14,7 +14,6 @@ typedef struct _Vertex { //顶点的数据结构，用 Vertex 代替 struct _ver
     int x;
     int y;
     int id; //从 0 开始
-    int enable;    //是否可用
 } Vertex;
 
 typedef struct _Edge {
@@ -42,9 +41,11 @@ const char PATH[] = "data.txt";     //文件的路径
  * 检测文件是否存在
  * @return
  */
-bool checkFileValid() {
+int checkFileValid() {
     FILE *fp;
-    return fp == fopen(PATH, "r") != NULL;
+    fp = fopen(PATH, "r");
+    if (fp == NULL) return 0;
+    else return 1;
 }
 
 /*
@@ -60,35 +61,143 @@ double getDistance(int x1, int y1, int x2, int y2) {
  * 从文件中读取数据
  * @return Graph*
  */
-Graph *readData() {
-    FILE *fp;
+void readData(Graph* graph) {
+    FILE *fp = NULL;
     fp = fopen(PATH, "r");
-    Graph *graph = (Graph *) malloc(sizeof(Graph *));  //创建一个图的指针并为其分配内存空间
-    fscanf(fp, "%d", graph->vertexNum);   //从文件中读取点的个数
+    int vertexNum;
+    fscanf(fp, "%d", &vertexNum);   //从文件中读取点的个数
+    graph->vertexNum = vertexNum;
     if (graph->vertexNum == 0)  //如果点的个数为空
-        return graph;
+        return;
+    int id, x, y;
     for (int i = 0; i < graph->vertexNum; i++) {  //读取所有点的坐标
         Vertex *tempVertex = (Vertex *) malloc(sizeof(Vertex *));  //创建一个点的指针并为其分配内存空间
-        fscanf(fp, "%d %d %d %d", tempVertex->id, tempVertex->x,
-               tempVertex->y, tempVertex->enable);
+        fscanf(fp, "%d %d %d", &id, &x,
+               &y);
+        tempVertex->id = id;
+        tempVertex->x = x;
+        tempVertex->y = y;
         graph->vertexs[tempVertex->id] = tempVertex;
     }
-    fscanf(fp, "%d", graph->edgeNum); //从文件中读取边的个数
+    int edgeNum;
+    fscanf(fp, "%d", &edgeNum); //从文件中读取边的个数
+    graph->edgeNum = edgeNum;
+    int start, end;
+    double length;
     for (int i = 0; i < graph->edgeNum; i++) {
         Edge *tempEdge = (Edge *) malloc(sizeof(Edge *));   //创建一个边的指针并为其分配内存空间
-        fscanf(fp, "%d %d", tempEdge->start, tempEdge->end);
-        tempEdge->length = getDistance(graph->vertexs[tempEdge->start]->x,
-                                       graph->vertexs[tempEdge->start]->y,
-                                       graph->vertexs[tempEdge->end]->x,
-                                       graph->vertexs[tempEdge->end]->y);   //计算边的权值
-        graph->matrix[tempEdge->start][tempEdge->end] = tempEdge->length;
-        graph->matrix[tempEdge->end][tempEdge->start] = tempEdge->length;
+        fscanf(fp, "%d %d", &start, &end);
+        length = getDistance(graph->vertexs[start]->x,
+                             graph->vertexs[start]->y,
+                             graph->vertexs[end]->x,
+                             graph->vertexs[end]->y);   //计算边的权值
+        graph->matrix[start][end] = length;
+        graph->matrix[end][start] = length;
+    }
+    fclose(fp);
+    fp = NULL;
+}
+
+/**
+ * 向文件中写入数据
+ * @param graph
+ */
+void writeData(Graph graph) {
+    printf("写文件\n");
+    FILE *fp = NULL;
+    fp = fopen(PATH, "w+");
+    if (fp == NULL) {
+        printf("文件打开失败。\n");
+        return;
+    }
+    fprintf(fp, "%d\n", graph.vertexNum);  //把点的个数写入文件中
+    for (int i = 0; i < graph.vertexNum; i++) {  //把点的信息依次写入文件中
+        /*printf("id:%d x:%d y:%d\n", graph.vertexs[i]->id, graph.vertexs[i]->x,
+               graph.vertexs[i]->y);*/
+        fprintf(fp, "%d %d %d\n", graph.vertexs[i]->id, graph.vertexs[i]->x,
+                graph.vertexs[i]->y);
+    }
+    fprintf(fp, "%d\n", graph.edgeNum); //向文件中写入边的个数
+    for (int i = 0; i < graph.vertexNum; i++) {  //向文件中写入各条边的信息
+        for (int j = i; j < graph.vertexNum; j++) {
+            if (graph.matrix[i][j] != 0) { //i 与 j 连通
+                fprintf(fp, "%d %d\n", i, j);     //将边的两个顶点写入文件中
+            }
+        }
+    }
+    fclose(fp);
+    fp = NULL;
+}
+
+/**
+ * 从控制台输入图的相关信息
+ * @return
+ */
+void readFromConsole(Graph *graph) {
+    printf("请输入点的个数: ");
+    int vertexNum;
+    scanf("%d", &vertexNum);
+    if (vertexNum <= 0) {
+        return;
+    }
+    graph->vertexNum = vertexNum;
+    printf("输入点的信息：\n");
+    int x, y;
+    Vertex *tempVertex;
+    for (int i = 0; i < graph->vertexNum; i++) {  //读取所有点的坐标
+        tempVertex = (Vertex *) malloc(sizeof(Vertex *));  //创建一个点的指针并为其分配内存空间
+        scanf("%d %d", &x, &y);
+        tempVertex->id = i;     //id 递增
+        tempVertex->x = x;
+        tempVertex->y = y;
+//        printf("从控制台读取点的信息：%d %d %d\n", tempVertex->id, tempVertex->x, tempVertex->y);
+        graph->vertexs[tempVertex->id] = tempVertex;
+//        printf("Hello World\n");
+    }
+    printf("输入边的个数：\n");
+    int edgeNum;
+    scanf("%d", &edgeNum); //读取边的个数
+    graph->edgeNum = edgeNum;
+    int start, end;
+    double length;
+    printf("输入边的信息：\n");
+    for (int i = 0; i < graph->edgeNum; i++) {
+        scanf("%d %d", &start, &end);
+        length = getDistance(graph->vertexs[start]->x,
+                                       graph->vertexs[start]->y,
+                                       graph->vertexs[end]->x,
+                                       graph->vertexs[end]->y);   //计算边的权值
+        graph->matrix[start][end] = length;
+        graph->matrix[end][start] = length;
+    }
+}
+
+Result *prim(Graph graph) {
+    return NULL;
+}
+
+Graph createGraph() {
+    Graph graph;
+    graph.vertexNum = 0;
+    graph.edgeNum = 0;
+    for (int i = 0;i < INFINITY;i++) {
+        for (int j = 0;j < INFINITY;j++) {
+            graph.matrix[i][j] = 0;
+        }
     }
     return graph;
 }
 
-Result *prim() {
-    return NULL;
+/**
+ * 释放内存
+ * @param graph
+ */
+void freeGraph(Graph *graph) {
+    if (graph == NULL)
+        return;
+    for (int i = 0; i < graph->vertexNum; i++) {  //读取所有点的坐标
+        free(graph->vertexs[i]);
+    }
 }
 
 int main() {
@@ -99,190 +208,35 @@ int main() {
      * 4. Prim 算法
      * 5. 输出
      */
-    Graph *graph;
-    if (checkFileValid()) {     //文件存在
-        graph = readData();     //从文件中读取数据
+    printf("开始\n");
+    Graph graph = createGraph();
+    if (checkFileValid() == 1) {     //文件存在
+        printf("文件存在\n");
+        readData(&graph);     //从文件中读取数据
     } else {    //文件不存在
         //从控制台输入数据，构造 graph 同时写到文件中
+        printf("文件不存在\n");
+        readFromConsole(&graph);
+        printf("点的个数：%d\n", graph.vertexNum);
+        printf("边的个数：%d\n", graph.edgeNum);
+        writeData(graph);
     }
-    Result *result = prim();
+    printf("-------\n");
+    printf("点的个数：%d\n", graph.vertexNum);
+    printf("边的个数：%d\n", graph.edgeNum);
+    Result *result = prim(graph);
     if (result == NULL || result->length == 0) {
-        printf("没有可用的边");
-        exit(-1);
-    }
-    printf("选择的边共： %d 条：\n", result->length);
-    for (int i = 0; i < result->length; i++) {
-        printf("%d ---- %d, 长度为：%f \n", result->edges[i]->start,
-               result->edges[i]->end,
-               result->edges[i]->length);
-    }
-    return 0;
-}
-
-/*
-#define INFINITY 1000
-#define max_name 50
-#define max_vertex_num 50
-#define OK 1
-#define ERROR 0
-#define OVERFLOW -1
-#define MaxVertexNum 100//最大城市数
-typedef int Status;
-typedef struct Decr {
-    int x;
-    int y;
-} Decr;
-typedef char vertex[max_name];
-typedef int adjMatrix[max_vertex_num][max_vertex_num];
-typedef struct {
-    vertex adjvex;//邻接矩阵
-    int lowcost;//权值
-};
-close[max_vertex_num];
-
-typedef struct {
-    int n; */
-/*图的顶点个数 *//*
-
-    int m; */
-/* 图的边个数 *//*
-
-    TownType towns[MAXVEX]; */
-/* 顶点信息 *//*
-
-    RoadType roads[MAXVEX][MAXVEX];*/
-/*边信息 *//*
-
-} GraphMatrix;
-typedef struct {
-    int start_town, stop_town; */
-/* 边的起点和终点 *//*
-
-    RoadType weight; */
-/* 边的权 *//*
-
-    enum {
-        EXIST, UNEXIST
-    } ex;*/
-/*区别已经建好的公路和未修建的公路 *//*
-
-} Edge;
-Edge mst[50];
-
-typedef char VertexType//顶点类型用户自定义
-typedef int EdgeType, Status;//边上的权值用户自己定义
-typedef struct {
-    VertexType vexs[MaxVertexNum];//顶点表
-    EdgeType edges[MaxVertexNum][MaxVertexNum];//邻接矩阵
-    int n, e; //图中当前顶点数和边数
-} MGragh;
-
-Status writeFile(Decr &dr, int n) {
-    FILE *fp;
-    if ((fp = fopen("datd.txt", "wb")) == NULL)//打开输出文件
-    {
-        printf("cannot open file\n");
-        return ERROR;
-    }
-    for (int i = 0; i < n; i++)
-        if (fwrite(dr + i, sizeof(struct Decr), 1, fp) != 1)
-            printf("file write error\n");
-    fclose(fp);
-    return OK;
-
-}
-
-Status readFile(int n) {
-    FILE *fp;
-    Decr dr[n];
-    if ((fp = fopen("data.txt"."rb"))==NULL)//打开输出文件
-    {
-        printf("cannot open file\n");
-        exit(OVERFLOW);
-        return ERROR;
-    }
-    for (int i = 0; i < n; i++) {
-        fread(&dr[i], sizeof(struct Decr), 1, fp);
-        printf("%d%d\n", dr[i].x, dr[i].y);
-    }
-    fclose(fp);
-    return OK;
-}
-
-void dfsMatrix(GraphMatrix GM, int i, int n, int &visited[]) {
-    int j;
-    printf("%d", i);
-    visited[i] = 1;
-    for (int j = 0; j < n; j++)
-        if (GM[i][j] != 0 && GM[i][j] != MaxValue)&&!visited[j])
-    dfsMatrix(GM, j, n);
-}
-
-GraphThrough(GraphMatrix
-GM){
-fro(i = 0;
-i<n;
-i++)
-visited[i]=0;
-dfsMatrix(GM,
-0,n,visited);
-for(
-i = 0;
-i<n;
-i++)
-if(visited[i]==1) num++;
-if(num==n) return 1;
-else return 0;
-}
-
-void QSort(Edge mst[50], int low, int hight) {
-    if (low < high) {
-        pivotloc = Partition(mst[50], low, high);
-        QSort(mst[50], low, pivotloc - 1);
-        QSort(mst[50], pivotloc + 1;
-        high);
-    }
-}
-
-int easy(GraphMatrix &GM, Edge mst[]) {
-    int i, j, num = 0, th, weight;
-    for (i = 0; i < GM.m; i++) {
-        if (mst[i].ex == UNEXIST) {
-            weight = GM.roads[start_town][stop_town];
-            GM.roads[start_town][stop_town] = 0
+        printf("没有可用的边\n");
+    } else {
+        printf("选择的边共： %d 条：\n", result->length);
+        for (int i = 0; i < result->length; i++) {
+            printf("%d ---- %d, 长度为：%f \n", result->edges[i]->start,
+                   result->edges[i]->end,
+                   result->edges[i]->length);
         }
-        th = GraphThrough(GM);
-        if (th == 1) continue;
-        else GM.roads[start_town][stop_town] = weight;
     }
-
-}
-
-void MiniSpanTree_PRIM(MGraph G, VertexType u) {
-    k = LocateVex(G, u);
-    for (j = 0; j < G.vexnum; ++j)
-        if (j != k) closedge[j] = {u，G。arcs[k][j].adj};
-    closedge[k].lowcost = 0;
-    for (i = 1; i<G.vexnum; ++i) {
-        k = minimum(closedge);
-        printf(closedge[k].adjvex, Gvexs[k]);
-        closedge[k].lowcost = 0;
-        for (j = 0; j < G.vexnum; ++j)
-            if (G.arcs[k][j].adj < closedge[j].lowcost)
-                closedge[j] = {G.vexs[k], G.arcs[k][j].adj}
-    }
-
-}
-
-int main() {
-    */
-/*
-     * 1. 判断文件是否存在以及文件中是否有内容
-     * 2. 如果没有的话，就向文件中写入数ßß据
-     * 3. 如果有的话，就读取文件数据
-     * 4. Prim 算法
-     * 5. 输出
-     *//*
-
+    freeGraph(&graph);
+    printf("-------\n");
+    printf("结束\n");
     return 0;
-}*/
+}
